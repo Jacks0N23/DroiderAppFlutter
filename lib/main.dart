@@ -1,10 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:html_unescape/html_unescape.dart';
+import 'package:http/http.dart' as http;
+
 
 void main() => runApp(new MyApp());
+const articleScreen = "article";
 
 class MyApp extends StatelessWidget {
 
@@ -14,6 +17,7 @@ class MyApp extends StatelessWidget {
       title: 'Droider List',
       theme: new ThemeData(
         primarySwatch: Colors.orange,
+        primaryColorBrightness: Brightness.dark,
       ),
       home: new FeedPage(title: 'Droider'),
     );
@@ -31,60 +35,93 @@ class FeedPage extends StatefulWidget {
 
 class _FeedPageState extends State<FeedPage> {
 
-  var _views = [];
+  List items;
+  final htmlUnEscape = new HtmlUnescape();
 
-
-  _loadData() async {
-    var httpClient = new HttpClient();
-    var link = 'http://droider.ru/wp-content/themes/droider/feed.php?category=0&slug=main&count=12&offset=0';
+  Future _loadData() async {
+    var link = Uri.encodeFull(
+        'http://droider.ru/wp-content/themes/droider/feed.php?category=0&slug=main&count=12&offset=0');
 //    var uri = new Uri.http('http://droider.ru', '/wp-content/themes/droider/feed.php',
 //        {'category': '0', 'slug':'main', 'count': '12', 'offset': '0'});
-    /**
-     * FIXME Эта строчка падает в рантайме при попытке вычленить из имени домена "droider.ru" номер порта
-     * FIXME Он пробует сделать radix-чётотам и падает
-     */
-    var uri = Uri.parse(link);
-    var request = await httpClient.getUrl(uri);
-    var response = await request.close();
-    var responseBody = await response.transform(UTF8.decoder).join();
 
-    Map data = JSON.decode(responseBody);
-
-    List items = data['posts'];
-
-    var htmlUnEscape = new HtmlUnescape();
-
-    var views = items.map((element) =>
-    new Padding(padding: new EdgeInsets.all(8.0),
-        child: new Card(child: new Column(children: <Widget>[
-          new Image.network(element['picture_wide']),
-          new Text(htmlUnEscape.convert(element['title']),
-              style: new TextStyle(height: 4.0, fontWeight: FontWeight.bold))
-        ],))));
-
-
+    var response = await http.get(link);
+    Map data = JSON.decode(response.body);
     setState(() {
-      _views = views.toList();
+      items = data['posts'];
     });
+    print(items.toString());
+    return true;
+  }
+
+  @override
+  void initState() {
+    _loadData();
+    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
-    _loadData();
-
     return new Scaffold(
       appBar: new AppBar(
+          title: new Text(widget.title
+          )),
+      body: new RefreshIndicator(
+          child: new ListView.builder(
+              itemCount: items == null ? 0 : items.length,
+              itemBuilder: cardItemBuilder),
+          onRefresh: _loadData),
+    );
+  }
 
-        title: new Text(widget.title),
-      ),
-      body: new ListView(children: _views),
-      floatingActionButton: new FloatingActionButton(
-        onPressed: () {
-          _loadData();
+  Widget cardItemBuilder(context, index) {
+    final title = htmlUnEscape.convert(items[index]['title']);
+    final cardImageUrl = items[index]['picture_wide'];
+    final articleImageUrl = items[index]['picture_basic'];
+    return new GestureDetector(
+        onTap: () {
+          Route route = new MaterialPageRoute(
+              builder: (BuildContext context) =>
+              new Article(title, articleImageUrl));
+          Navigator.of(context).push(route);
         },
-        tooltip: 'Update data',
-        child: new Icon(Icons.update),
-      ),
+        child:
+        new Padding(padding: new EdgeInsets.all(8.0),
+            child: new Card(child: new Column(children: <Widget>[
+
+              new Image.network(cardImageUrl),
+              new Text(title,
+                  style: new TextStyle(
+                      height: 4.0, fontWeight: FontWeight.bold))
+            ],))));
+  }
+}
+
+class Article extends StatefulWidget {
+  final image;
+  final title;
+
+  Article(this.title, this.image);
+
+
+  @override
+  _ArticleState createState() => new _ArticleState();
+}
+
+class _ArticleState extends State<Article> {
+
+  @override
+  Widget build(BuildContext context) {
+    return new Scaffold(
+      appBar: new AppBar(
+          title: new Text(widget.title)),
+      body:
+      new Column(children: <Widget>[
+        new Image.network(
+            widget.image, fit:
+        BoxFit.cover,
+            width: double.infinity,
+            alignment: Alignment.center)
+      ]),
     );
   }
 }

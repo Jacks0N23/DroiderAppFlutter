@@ -1,4 +1,4 @@
-package com.github.madrazzl3.flutterapp
+package com.github.jacks0n23.droiderAppFlut
 
 import android.os.Bundle
 
