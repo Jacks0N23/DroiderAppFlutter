@@ -2,8 +2,12 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:http/http.dart' as http;
+
+import 'HtmlParser.dart';
+
 
 
 void main() => runApp(new MyApp());
@@ -38,7 +42,7 @@ class _FeedPageState extends State<FeedPage> {
   List items;
   final htmlUnEscape = new HtmlUnescape();
 
-  Future _loadData() async {
+  Future<Null> _loadData() async {
     var link = Uri.encodeFull(
         'http://droider.ru/wp-content/themes/droider/feed.php?category=0&slug=main&count=12&offset=0');
 //    var uri = new Uri.http('http://droider.ru', '/wp-content/themes/droider/feed.php',
@@ -50,7 +54,6 @@ class _FeedPageState extends State<FeedPage> {
       items = data['posts'];
     });
     print(items.toString());
-    return true;
   }
 
   @override
@@ -63,8 +66,7 @@ class _FeedPageState extends State<FeedPage> {
   Widget build(BuildContext context) {
     return new Scaffold(
       appBar: new AppBar(
-          title: new Text(widget.title
-          )),
+          title: new Text(widget.title)),
       body: new RefreshIndicator(
           child: new ListView.builder(
               itemCount: items == null ? 0 : items.length,
@@ -77,11 +79,13 @@ class _FeedPageState extends State<FeedPage> {
     final title = htmlUnEscape.convert(items[index]['title']);
     final cardImageUrl = items[index]['picture_wide'];
     final articleImageUrl = items[index]['picture_basic'];
+    final articleUrl = items[index]['url'];
+
     return new GestureDetector(
         onTap: () {
           Route route = new MaterialPageRoute(
               builder: (BuildContext context) =>
-              new Article(title, articleImageUrl));
+              new Article(title, articleImageUrl, articleUrl));
           Navigator.of(context).push(route);
         },
         child:
@@ -97,10 +101,11 @@ class _FeedPageState extends State<FeedPage> {
 }
 
 class Article extends StatefulWidget {
-  final image;
+  final imageUrl;
   final title;
+  final articleUrl;
 
-  Article(this.title, this.image);
+  Article(this.title, this.imageUrl, this.articleUrl);
 
 
   @override
@@ -109,19 +114,23 @@ class Article extends StatefulWidget {
 
 class _ArticleState extends State<Article> {
 
+  String articleHtml = "";
+
+  loadArticle(String url) async {
+    var response = await http.get(url);
+    setState(() {
+      articleHtml = response.body;
+    });
+  }
+
+  @override
+  void initState() {
+    loadArticle(widget.articleUrl);
+    super.initState();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return new Scaffold(
-      appBar: new AppBar(
-          title: new Text(widget.title)),
-      body:
-      new Column(children: <Widget>[
-        new Image.network(
-            widget.image, fit:
-        BoxFit.cover,
-            width: double.infinity,
-            alignment: Alignment.center)
-      ]),
-    );
+    return new HtmlParser(articleHtml);
   }
 }
