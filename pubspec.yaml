@@ -2,9 +2,10 @@ name: flutter_app
 description: A new Flutter application.
 
 dependencies:
-  flutter_webview_plugin: "^0.1.6"
-  html: any
-  html_unescape: ^0.1.5
+  flutter_webview_plugin: ^0.3.0+2
+  http: ^0.12.0+1
+  html: ^0.13.3+3
+  html_unescape: ^1.0.1+2
   flutter:
     sdk: flutter
 

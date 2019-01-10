@@ -46,7 +46,7 @@ class _FeedPageState extends State<FeedPage> {
 //        {'category': '0', 'slug':'main', 'count': '12', 'offset': '0'});
 
     var response = await http.get(link);
-    Map data = JSON.decode(response.body);
+    Map data = json.decode(response.body);
     setState(() {
       items = data['posts'];
     });
