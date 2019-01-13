@@ -3,14 +3,14 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_app/HtmlParser.dart';
 import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:http/http.dart' as http;
 
-import 'HtmlParser.dart';
-
 void main() => runApp(new MyApp());
 const articleScreen = "article";
+Map<String, String> urlToHtml = new Map();
 
 class MyApp extends StatelessWidget {
   @override
@@ -115,13 +115,18 @@ class _ArticleState extends State<Article> {
   loadArticle(String url) async {
     var response = await http.get(url);
     setState(() {
-      articleHtml = response.body;
+      articleHtml = new HtmlParser(response.body).parseHtml();
+      urlToHtml[widget.articleUrl] = articleHtml;
     });
   }
 
   @override
   void initState() {
-    loadArticle(widget.articleUrl);
+    if (urlToHtml.containsKey(widget.articleUrl)) {
+      articleHtml = urlToHtml[widget.articleUrl];
+    } else {
+      loadArticle(widget.articleUrl);
+    }
     super.initState();
   }
 
@@ -131,7 +136,7 @@ class _ArticleState extends State<Article> {
         padding: new EdgeInsets.all(8.0),
         child: new WebviewScaffold(
           appBar: new AppBar(title: new Text(widget.title)),
-          url: new Uri.dataFromString(new HtmlParser(articleHtml).parseHtml(),
+          url: new Uri.dataFromString(articleHtml,
               mimeType: 'text/html',
               parameters: {'charset': 'utf-8'}).toString(),
         ));

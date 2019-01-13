@@ -16,7 +16,7 @@ class HtmlParser {
       parsedHtml = _articleHtml;
       return _articleHtml;
     } else
-      return "";
+      return parsedHtml;
   }
 
   String _setupHtml(String html) {
