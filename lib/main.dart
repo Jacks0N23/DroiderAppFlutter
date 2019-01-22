@@ -1,10 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_app/HtmlParser.dart';
-import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
+import 'package:flutter_native_web/flutter_native_web.dart';
 import 'package:html_unescape/html_unescape.dart';
 import 'package:http/http.dart' as http;
 
@@ -40,10 +41,8 @@ class _FeedPageState extends State<FeedPage> {
   final htmlUnEscape = new HtmlUnescape();
 
   Future<Null> _loadData() async {
-    var link = Uri.encodeFull(
+    var link = Uri.parse(
         'http://droider.ru/wp-content/themes/droider/feed.php?category=0&slug=main&count=12&offset=0');
-//    var uri = new Uri.http('http://droider.ru', '/wp-content/themes/droider/feed.php',
-//        {'category': '0', 'slug':'main', 'count': '12', 'offset': '0'});
 
     var response = await http.get(link);
     Map data = json.decode(response.body);
@@ -88,12 +87,23 @@ class _FeedPageState extends State<FeedPage> {
             padding: new EdgeInsets.all(8.0),
             child: new Card(
                 child: new Column(
-              children: <Widget>[
-                new Image.network(cardImageUrl),
-                new Text(title,
-                    style:
-                        new TextStyle(height: 4.0, fontWeight: FontWeight.bold))
-              ],
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    new CachedNetworkImage(
+                      imageUrl: cardImageUrl,
+                      placeholder: new CircularProgressIndicator(),
+                      errorWidget: new Icon(Icons.error),
+                    ),
+                    new Padding(
+                      padding: EdgeInsets.fromLTRB(16.0, 32.0, 16.0, 16.0),
+                      child: new Text(title,
+                          softWrap: false,
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
+                          style: new TextStyle(fontWeight: FontWeight.bold)
+                      ),
+                    )
+                  ],
             ))));
   }
 }
@@ -120,6 +130,11 @@ class _ArticleState extends State<Article> {
     });
   }
 
+  void _onWebCreated(WebController webController) {
+    print("inside initializer");
+    webController.loadData(articleHtml);
+  }
+
   @override
   void initState() {
     if (urlToHtml.containsKey(widget.articleUrl)) {
@@ -132,13 +147,12 @@ class _ArticleState extends State<Article> {
 
   @override
   Widget build(BuildContext context) {
-    return new Padding(
-        padding: new EdgeInsets.all(8.0),
-        child: new WebviewScaffold(
-          appBar: new AppBar(title: new Text(widget.title)),
-          url: new Uri.dataFromString(articleHtml,
-              mimeType: 'text/html',
-              parameters: {'charset': 'utf-8'}).toString(),
-        ));
+    return new Scaffold(
+        appBar: new AppBar(title: new Text(widget.title)),
+        body: new Container(
+            constraints: BoxConstraints.expand(),
+            child: new FlutterNativeWeb(onWebCreated: _onWebCreated)
+        )
+    );
   }
 }
